@@ -18,7 +18,8 @@ Clone the Repository:
   
   Run the Installation Script:
 
-    sudo ./setup.sh
+    chmod +x install.sh
+    sudo ./install.sh
 
 This script will:
 
