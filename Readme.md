@@ -13,8 +13,8 @@ If you are on a Linux or macOS system with Bash available, you can use the provi
 
 Clone the Repository:
 
-    git clone https://github.com/Li0N77/lsubs.git
-    cd lsubs
+    git clone https://github.com/Li0N77/LSubs.git
+    cd LSubs
   
   Run the Installation Script:
 
