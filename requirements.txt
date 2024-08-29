@@ -1,9 +1,7 @@
 json
 os
 requests
-dns.resolver
-dns.query
-dns.zone
+dns
 argparse
 subprocess
 re
