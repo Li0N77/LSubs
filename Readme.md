@@ -1,5 +1,5 @@
 # LSubs
-### SubDomain Tnumeration Tool
+### SubDomain enumeration Tool
 A powerful and extensible Python-based subdomain enumeration tool designed to help security researchers and penetration testers identify subdomains associated with a target domain. The tool leverages multiple techniques and integrates with various third-party services to discover as many subdomains as possible.
 
 ## Features
