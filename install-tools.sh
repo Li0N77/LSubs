@@ -28,3 +28,6 @@ then
 else
     echo "Sublist3r is already installed."
 fi
+
+
+echo "lsubs [-d <domain>] [--api_key_virustotal <key>] [--api_key_securitytrails <key>] [--api_key_censys <key>] [--api_key_shodan <key>] [--api <api arguments>]"
