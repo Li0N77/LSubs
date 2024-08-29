@@ -16,10 +16,12 @@ Clone the Repository:
     git clone https://github.com/Li0N77/LSubs.git
     cd LSubs
   
-  Run the Installation Script:
-
+  Run the Installation Scripts :
+    
     chmod +x install.sh
-    sudo ./install.sh
+    chmod +x install-tools.sh
+    ./install.sh
+    sudo ./install-tools.sh
 
 This script will:
 
@@ -28,46 +30,31 @@ This script will:
 
 ## Configuration
 
-To use APIs from services like SecurityTrails, Censys, and Shodan, you need to provide your API keys in a configuration file.
+To use APIs from services like SecurityTrails, Censys, and Shodan, you need to provide your API keys in the tool .
 
-in the file named config.json :
-
-    {
-        "SecurityTrails": "YOUR_SECURITYTRAILS_API_KEY",
-        "Censys": "YOUR_CENSYS_API_KEY",
-        "Shodan": "YOUR_SHODAN_API_KEY"
-    }
-
-  - Replace YOUR_SECURITYTRAILS_API_KEY, YOUR_CENSYS_API_KEY, and YOUR_SHODAN_API_KEY with your actual API keys.
-  - If you do not wish to use any of these APIs, you can leave the corresponding values as empty strings (""). For example:
-
-        {
-            "SecurityTrails": "",
-            "Censys": "",
-            "Shodan": ""
-        }
-
-  - The tool will still function without API keys, but some methods may have limited capabilities or reduced data coverage.
+      lsubs -A --api_key_securitytrails yourapi --api_key_censys yourapi --api_key_shodan yourapi 
+      
+you can use one of them 
 
 ## Usage
 
 Run the tool by specifying the target domain. The tool will automatically utilize multiple methods to discover subdomains.
 
 
-    python lsubs.py example.com
+    lsubs -d example.com
 
 Command-Line Arguments
 
       -h : help page
-      domain : (Required) The target domain for subdomain enumeration.
+      -d DOMAIN, --domain DOMAIN
+                        The domain to enumerate subdomains for subdomain enumeration.
       --api_key_securitytrails API_KEY_SECURITYTRAILS
                           API key for SecurityTrails (optional)
       --api_key_censys API_KEY_CENSYS
                           API key for Censys (optional)
       --api_key_shodan API_KEY_SHODAN
                           API key for Shodan (optional)
-      -f FILE, --file FILE  Custom subdomains file (optional)
-      -nf, --no_fuzz        Disable subdomains fuzzing (optional)
+      -A, --api API argument you want to change it          To modify config file
 
 ## Methods Implemented
 
