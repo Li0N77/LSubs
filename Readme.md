@@ -6,8 +6,6 @@ A powerful and extensible Python-based subdomain enumeration tool designed to he
 
   - Multiple Enumeration Techniques: Utilizes several methods for subdomain discovery, including DNS brute-forcing, public search engines, certificate transparency logs, and more.
   
-  - Recon-ng Integration: Incorporates the Recon-ng framework for advanced subdomain enumeration.
-  
   - No API Key Requirement: Most modules work without API keys, making the tool accessible to everyone. However, it does support SecurityTrails API for additional data.
 
 # Installation
