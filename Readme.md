@@ -13,8 +13,8 @@ If you are on a Linux or macOS system with Bash available, you can use the provi
 
 Clone the Repository:
 
-    git clone https://github.com/yourusername/SubDomain-Enumeration-Tool.git
-    cd SubDomain-Enumeration-Tool
+    git clone https://github.com/Li0N77/lsubs.git
+    cd lsubs
   
   Run the Installation Script:
 
