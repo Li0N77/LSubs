@@ -1,9 +1,3 @@
-os
 requests
-dns
 argparse
-subprocess
-re
-sys
-urlparse
 BeautifulSoup
