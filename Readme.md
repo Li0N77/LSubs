@@ -24,7 +24,30 @@ This script will:
 
   - Install required Python packages.
   - Install Amass, Sublist3r, and if they are not already installed on your system.
-    
+
+## Configuration
+
+To use APIs from services like SecurityTrails, Censys, and Shodan, you need to provide your API keys in a configuration file.
+
+in the file named config.json :
+
+    {
+        "SecurityTrails": "YOUR_SECURITYTRAILS_API_KEY",
+        "Censys": "YOUR_CENSYS_API_KEY",
+        "Shodan": "YOUR_SHODAN_API_KEY"
+    }
+
+  - Replace YOUR_SECURITYTRAILS_API_KEY, YOUR_CENSYS_API_KEY, and YOUR_SHODAN_API_KEY with your actual API keys.
+  - If you do not wish to use any of these APIs, you can leave the corresponding values as empty strings (""). For example:
+
+        {
+            "SecurityTrails": "",
+            "Censys": "",
+            "Shodan": ""
+        }
+
+  - The tool will still function without API keys, but some methods may have limited capabilities or reduced data coverage.
+
 ## Usage
 
 Run the tool by specifying the target domain. The tool will automatically utilize multiple methods to discover subdomains.
