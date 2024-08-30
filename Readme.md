@@ -61,13 +61,18 @@ Command-Line Arguments
                           API key for Shodan (optional)
       -A, --api API argument you want to change it          To modify config file
 
-## Methods Implemented
+## Methods :
 
-  - DNS Brute-Forcing: Generates possible subdomain names and checks if they resolve.
-  - Search Engine Scraping: Extracts subdomains from search engine results.
-  - Certificate Transparency Logs: Queries public certificate transparency logs for domain certificates, revealing subdomains.
-  - Amass Integration: Leverages the OWASP Amass tool for comprehensive subdomain discovery.
-  - Sublist3r Integration: Uses Sublist3r to discover subdomains using search engines.
+  - DNS Zone transfer
+  - crt.sh
+  - Scraping Domains From bing
+  - Sublist3r
+  - Subfinder
+  - Wayback Machine
+  - DNS Dumpster
+  - Searching GitHub for subdomains
+  - CertSpotter
+  - Common Crawl
 
 ## Supported Platforms
   - Linux
