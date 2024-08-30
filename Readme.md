@@ -44,11 +44,15 @@ Run the tool by specifying the target domain. The tool will automatically utiliz
 
     lsubs -d example.com
 
+    lsubs -l domains.txt
+
 Command-Line Arguments
 
       -h : help page
       -d DOMAIN, --domain DOMAIN
-                        The domain to enumerate subdomains for subdomain enumeration.
+                        The domain to enumerate subdomains .
+      -l List of domains, --list
+                        The list of domains to enumerate subdomains 
       --api_key_securitytrails API_KEY_SECURITYTRAILS
                           API key for SecurityTrails (optional)
       --api_key_censys API_KEY_CENSYS
