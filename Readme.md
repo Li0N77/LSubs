@@ -78,6 +78,14 @@ Command-Line Arguments
   - Linux
   - macOS
 
+## Updates
+# 1.0.0
+  - remove amass tool to be faster
+  - adding [ -l / --list ] to support list option
+# 1.0.1
+  - adding subfinder
+  - adding Auto-update feature
+
 ## Reporting Issues
 
 If you encounter any issues or have suggestions for improvements, please open an issue on GitHub.
