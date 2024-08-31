@@ -79,10 +79,10 @@ Command-Line Arguments
   - macOS
 
 ## Updates
-# 1.0.0
+### 1.0.0
   - remove amass tool to be faster
   - adding [ -l / --list ] to support list option
-# 1.0.1
+### 1.0.1
   - adding subfinder
   - adding Auto-update feature
 
