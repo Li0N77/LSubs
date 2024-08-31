@@ -27,7 +27,8 @@ This script will:
 
   - Install required Python packages.
   - Install Amass, Sublist3r, and if they are not already installed on your system.
-  - Install lsubs in ~/.local/bin/  to run it from any directory
+  - adding ~/.local/bin/ to PATH enviroment 
+  - Install lsubs in ~/.local/bin/ to run it from any directory
 
 ## Configuration
 
