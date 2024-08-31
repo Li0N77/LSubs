@@ -2,6 +2,8 @@ echo "setup configuration"
 echo "{\n    \"SecurityTrails\": \"\",\n    \"Censys\": \"\",\n    \"Shodan\": \"\"\n}" > ~/.local/bin/lsubs-config.json
 chmod +x lsubs
 cp lsubs ~/.local/bin/
+echo 'export PATH=$PATH:~/.local/bin/' >> ~/.bashrc
+echo 'export PATH=$PATH:~/.local/bin/' >> ~/.zshrc
 
 echo "Installing Python packages..."
 pip install -r requirements.txt
