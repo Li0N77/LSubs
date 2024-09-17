@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import requests
+import dns.resolver
+import dns.query
+import dns.zone
+import argparse
+import subprocess
+import re,sys
+from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+from pathlib import Path
+import shutil,zipfile,stat
+
+apis = {
+    "crt.sh": "https://crt.sh/?q=%25.{domain}&output=json",
+    "SecurityTrails": "https://api.securitytrails.com/v1/domain/{domain}/subdomains?apikey={api_key}",
+    "Censys": "https://search.censys.io/api/v2/hosts/search?q={domain}&per_page=100",
+    "Shodan": "https://api.shodan.io/dns/domain/{domain}?key={api_key}",
+    "CertSpotter": "https://api.certspotter.com/v1/issuances?domain={domain}&expand=dns_names"
+}
+
+config_file = f'{str(Path.home())}/.local/bin/lsubs-config.json'
+
+clr = '\033[0m'
+green = '\033[92m'
+FAIL = '\033[91m'
+
+subdomains = set()
+subs = set()
+
+current_version = "1.0.2"
+pastebin_url = "https://pastebin.com/raw/kYkssEd8"
+tool_path = os.path.expanduser("~/.local/bin/lsubs")
+download_dir = os.path.expanduser("~/.local/bin")
+github_url = "https://github.com/Li0N77/LSubs/archive/refs/heads/main.zip"
+download_path = os.path.join(download_dir, "update.zip")
+
+def load_config():
+    print(f"Load API keys from the configuration file.")
+    if os.path.exists(config_file):
+        with open(config_file, 'r') as f:
+            return json.load(f)
+    return {}
+
+def crtsh_enumeration(domain):
+    
+    try:
+        url = apis["crt.sh"].format(domain=domain)
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            subdomains = {entry['name_value'] for entry in data}
+            return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def securitytrails_enumeration(domain, api_key):
+    
+    try:
+        url = apis["SecurityTrails"].format(api_key=api_key, domain=domain)
+        headers = {"APIKEY": api_key}
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            subdomains = data.get('subdomains', [])
+            return [f"{sub}.{domain}" for sub in subdomains]
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def censys_enumeration(domain, api_key):
+    
+    try:
+        url = apis["Censys"].format(domain=domain)
+        headers = {"Authorization": f"Basic {api_key}"}
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            subdomains = []
+            for result in data.get('results', []):
+                for subdomain in result.get('names', []):
+                    if domain in subdomain:
+                        subdomains.append(subdomain)
+            return subdomains
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def dns_zone_transfer(domain):
+    
+    subdomains = []
+    try:
+        ns_records = dns.resolver.resolve(domain, 'NS')
+        for ns in ns_records:
+            try:
+                zone = dns.zone.from_xfr(dns.query.xfr(str(ns), domain))
+                for name, node in zone.nodes.items():
+                    subdomains.append(f"{name}.{domain}")
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return subdomains
+
+def bing_search(domain):
+    
+    try:
+        subdomains = set()
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        query = f"site:{domain}"
+        url = f"https://www.bing.com/search?q={query}&count=50"
+        response = requests.get(url, headers=headers)
+        subdomains.update(parse_search_results(response.text, domain))
+        return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def parse_search_results(html, domain):
+    
+    subdomains = set()
+    links = re.findall(r'https?://([a-zA-Z0-9.-]+)\.' + re.escape(domain), html)
+    subdomains.update(links)
+    return subdomains
+
+
+def sublist3r_enumeration(domain):
+    
+    subdomains = []
+    try:
+        output = subprocess.check_output(["sublist3r", "-d", domain, "-o", "/dev/stdout"], stderr=subprocess.STDOUT).decode()
+        subdomains = output.splitlines()
+        return subdomains
+    except Exception as e:
+        print(f"[!] Error running Sublist3r: {e}")
+    return []
+
+def subfinder_enumeration(domain):
+    
+    subdomains = []
+    try:
+        output = subprocess.check_output(["subfinder", "-d", domain, "-o", "/dev/stdout"], stderr=subprocess.STDOUT).decode()
+        subdomains = output.splitlines()
+        return subdomains
+    except Exception as e:
+        print(f"[!] Error running Sublist3r: {e}")
+    return []
+
+def wayback_machine_enumeration(domain):
+    
+    try:
+        url = f"http://web.archive.org/cdx/search/cdx?url=*.{domain}&output=txt&fl=original&collapse=urlkey"
+        response = requests.get(url)
+        subdomains = set(re.findall(r"https?://([a-zA-Z0-9.-]+)\." + re.escape(domain), response.text))
+        return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def dnsdumpster_enumeration(domain):
+    
+    try:
+        url = f"https://dnsdumpster.com/"
+        session = requests.Session()
+        response = session.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
+        response = session.post(url, data={'csrfmiddlewaretoken': csrf_token, 'targetip': domain}, headers={'Referer': url})
+        subdomains = set(re.findall(r'([a-zA-Z0-9.-]+)\.' + re.escape(domain), response.text))
+        return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def github_search(domain):
+    try:
+        
+        subdomains = set()
+        query = f'"{domain}"'
+        url = f"https://github.com/search?q={query}"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        subdomains.update(parse_search_results(response.text, domain))
+        return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+    
+def shodan_enumeration(domain, api_key):
+    
+    try:
+        url = apis["Shodan"].format(domain=domain, api_key=api_key)
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            subdomains = data.get('subdomains', [])
+            return subdomains
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def certspotter_enumeration(domain):
+    
+    try:
+        url = apis["CertSpotter"].format(domain=domain)
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            subdomains = set()
+            for entry in data:
+                subdomains.update(entry.get('dns_names', []))
+            return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def common_crawl_enumeration(domain):
+    try:
+        
+        url = f"http://index.commoncrawl.org/CC-MAIN-2023-13-index?url=*.{domain}&output=json"
+        response = requests.get(url)
+        subdomains = set(re.findall(r'https?://([a-zA-Z0-9.-]+)\.' + re.escape(domain), response.text))
+        return list(subdomains)
+    except Exception as e:
+        print(f"{FAIL}[!]{clr} Error running: {e}")
+    return []
+
+def extract_subdomains(target_root_domain):
+    extracted_subdomains = set()
+    pattern = re.compile(rf'.*\.{re.escape(target_root_domain)}$')
+
+    for domain in sorted(subdomains):
+        domain = domain.strip()
+        if '*' in domain:
+            continue
+        if pattern.match(domain):
+            extracted_subdomains.add(domain)
+    return extracted_subdomains
+
+def write_to_file(output_file, subs):
+    with open(output_file, 'w') as file:
+        for subdomain in subs:
+            file.write(subdomain + '\n')
+
+def main(domain, api_key_securitytrails=None, api_key_censys=None, api_key_shodan=None):
+    print(domain)
+    config = load_config()
+    api_key_securitytrails = api_key_securitytrails or config.get("SecurityTrails") or None
+    api_key_censys = api_key_censys or config.get("Censys") or None
+    api_key_shodan = api_key_shodan or config.get("Shodan") or None
+    
+    print(f"{green}[*]{clr} Querying crt.sh for subdomains")
+    subdomains.update(crtsh_enumeration(domain))
+
+    if api_key_securitytrails:
+        print(f"{green}[*]{clr} Querying SecurityTrails for subdomains")
+        subdomains.update(securitytrails_enumeration(domain, api_key_securitytrails))
+
+    if api_key_censys:
+        print(f"{green}[*]{clr} Querying Censys for subdomains")
+        subdomains.update(censys_enumeration(domain, api_key_censys))
+
+    print(f"{green}[*]{clr} Attempting DNS zone transfer")
+    subdomains.update(dns_zone_transfer(domain))
+
+    print(f"{green}[*]{clr} Scraping Bing for subdomains")
+    subdomains.update(bing_search(domain))
+
+    print(f"{green}[*]{clr} Running Sublist3r for subdomain enumeration")
+    subdomains.update(sublist3r_enumeration(domain))
+
+    print(f"{green}[*]{clr} Running Subfinder for subdomain enumeration")
+    subdomains.update(subfinder_enumeration(domain))
+
+    print(f"{green}[*]{clr} Scraping Wayback Machine for subdomains")
+    subdomains.update(wayback_machine_enumeration(domain))
+
+    print(f"{green}[*]{clr} Scraping DNS Dumpster for subdomains")
+    subdomains.update(dnsdumpster_enumeration(domain))
+
+    print(f"{green}[*]{clr} Searching GitHub for subdomains")
+    subdomains.update(github_search(domain))
+
+    if api_key_shodan:
+        print(f"{green}[*]{clr} Querying Shodan for subdomains")
+        subdomains.update(shodan_enumeration(domain, api_key_shodan))
+
+    print(f"{green}[*]{clr} Querying CertSpotter for subdomains")
+    subdomains.update(certspotter_enumeration(domain))
+
+    print(f"{green}[*]{clr} Scraping Common Crawl for subdomains")
+    subdomains.update(common_crawl_enumeration(domain))
+
+    subs.update(extract_subdomains(domain))
+
+def starter():
+    text = f"""
+ _        _______           ______   _______ 
+( \      (  ____ \|\     /|(  ___ \ (  ____ \\
+| (      | (    \/| )   ( || (   ) )| (    \/
+| |      | (_____ | |   | || (__/ / | (_____ 
+| |      (_____  )| |   | ||  __ (  (_____  )
+| |            ) || |   | || (  \ \       ) |
+| (____/\/\____) || (___) || )___) )/\____) |
+(_______/\_______)(_______)|/ \___/ \_______)
+
+    Programmed by Li0N | github : @Li0N77
+            Version : {current_version}
+"""
+    print(text)
+
+def update_api(api_key_securitytrails=None, api_key_censys=None, api_key_shodan=None):
+    config = load_config()
+    api_key_securitytrails = api_key_securitytrails or config.get("SecurityTrails") or ""
+    api_key_censys = api_key_censys or config.get("Censys") or ""
+    api_key_shodan = api_key_shodan or config.get("Shodan") or ""
+    home = str(Path.home())
+    with open(config_file, 'w') as file:
+        file.write("{\n    \"SecurityTrails\": \""+ api_key_securitytrails +"\",\n    \"Censys\": \""+ api_key_censys +"\",\n    \"Shodan\": \""+ api_key_shodan +"\"\n}")
+
+def check_for_updates():
+    response = requests.get(pastebin_url)
+    latest_version = response.text.strip()
+
+    if latest_version == "99":
+        print("needs update from github : https://github.com/Li0N77/LSubs")
+        exit()
+    elif latest_version > current_version:
+        print("A new version is available! Downloading...")
+       
+        response = requests.get(github_url)
+        with open(download_path, "wb") as file:
+            file.write(response.content)
+
+       
+        with zipfile.ZipFile(download_path, 'r') as zip_ref:
+            zip_ref.extractall(download_dir)
+
+       
+        source_dir = os.path.join(download_dir, "LSubs-main")
+        new_tool_path = os.path.join(source_dir, "lsubs")
+        shutil.copy2(new_tool_path, tool_path)
+
+        
+        st = os.stat(tool_path)
+        os.chmod(tool_path, st.st_mode | stat.S_IEXEC)
+
+        
+        os.remove(download_path)
+        shutil.rmtree(source_dir)
+
+        
+        os.execv(sys.executable, ['python'] + sys.argv)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Subdomain Enumeration Tool")
+    parser.add_argument("-d","--domain", help="The domain to enumerate subdomains",default=None)
+    parser.add_argument("-l","--list", help="The domain list to enumerate subdomains",default=None)
+    parser.add_argument("--api_key_securitytrails", help="API key for SecurityTrails (optional)", default=None)
+    parser.add_argument("--api_key_censys", help="API key for Censys (optional)", default=None)
+    parser.add_argument("--api_key_shodan", help="API key for Shodan (optional)", default=None)
+    parser.add_argument("-A","--api", help="To modify config file",default=False,action="store_true")
+    args = parser.parse_args()
+    starter()
+    check_for_updates()
+    if args.api == True and  args.api_key_securitytrails != None or args.api_key_censys != None or args.api_key_shodan != None:
+        update_api(args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
+    elif args.domain != None:
+        main(args.domain, args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
+        write_to_file(f"results.txt", subs)
+        print(f'{green}[*]{clr} Found {len(subs)} domains.')
+        print(f'{green}[*]{clr} Results saved to results.txt.')
+    elif args.list != None:
+        if os.path.exists(args.list):
+            f = open(args.list, 'r')
+            Lines = f.readlines()
+            for line in Lines:
+                main(line.strip(), args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
+            write_to_file(f"results.txt", subs)
+            print(f'{green}[*]{clr} Found {len(subs)} domains.')
+            print(f'{green}[*]{clr} Results saved to results.txt.')
+    else:
+        parser.print_help(sys.stderr)
+    
+
+
