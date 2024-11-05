@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from pathlib import Path
 import shutil,zipfile,stat
+from multiprocessing import Process,cpu_count,Lock,Value
+import time as t
 
 apis = {
     "crt.sh": "https://crt.sh/?q=%25.{domain}&output=json",
@@ -39,7 +41,6 @@ github_url = "https://github.com/Li0N77/LSubs/archive/refs/heads/main.zip"
 download_path = os.path.join(download_dir, "update.zip")
 
 def load_config():
-    print(f"Load API keys from the configuration file.")
     if os.path.exists(config_file):
         with open(config_file, 'r') as f:
             return json.load(f)
@@ -229,11 +230,10 @@ def common_crawl_enumeration(domain):
         print(f"{FAIL}[!]{clr} Error running: {e}")
     return []
 
-def extract_subdomains(target_root_domain):
+def extract_subdomains(ddomain):
     extracted_subdomains = set()
-    pattern = re.compile(rf'.*\.{re.escape(target_root_domain)}$')
-
-    for domain in sorted(subdomains):
+    pattern = re.compile(rf'.*\.{re.escape(ddomain)}$')
+    for domain in subdomains:
         domain = domain.strip()
         if '*' in domain:
             continue
@@ -242,12 +242,61 @@ def extract_subdomains(target_root_domain):
     return extracted_subdomains
 
 def write_to_file(output_file, subs):
-    with open(output_file, 'w') as file:
+    with open(output_file, 'a') as file:
         for subdomain in subs:
             file.write(subdomain + '\n')
+    file.close()
 
-def main(domain, api_key_securitytrails=None, api_key_censys=None, api_key_shodan=None):
-    print(domain)
+def threader(now,lock):
+    global subs
+    global subdomains
+    while(now.value < len(domains)):
+        main(now,lock)
+
+
+def main(now,lock):
+    config = load_config()
+    api_key_securitytrails = config.get("SecurityTrails") or None
+    api_key_censys = config.get("Censys") or None
+    api_key_shodan = config.get("Shodan") or None
+    
+
+    with lock:
+        id = now.value
+        now.value += 1
+    try:
+        domain = domains[id]
+        print(f"\r{green}[*]{clr} {id+1}/{len(domains)}",end='')
+        subdomains.update(crtsh_enumeration(domain))
+        if api_key_securitytrails:
+            subdomains.update(securitytrails_enumeration(domain, api_key_securitytrails))
+        if api_key_censys:
+            subdomains.update(censys_enumeration(domain, api_key_censys))
+        
+        subdomains.update(dns_zone_transfer(domain))
+        
+        subdomains.update(bing_search(domain))
+        
+        subdomains.update(sublist3r_enumeration(domain))
+        
+        subdomains.update(subfinder_enumeration(domain))
+        
+        subdomains.update(wayback_machine_enumeration(domain))
+        
+        subdomains.update(dnsdumpster_enumeration(domain))
+        
+        subdomains.update(github_search(domain))
+        if api_key_shodan:
+            subdomains.update(shodan_enumeration(domain, api_key_shodan))
+        
+        subdomains.update(certspotter_enumeration(domain))
+        subdomains.update(common_crawl_enumeration(domain))
+        with lock:
+            subs.update(extract_subdomains(domain))
+            write_to_file("results.txt", subs)
+    except:
+        None
+def single(domain, api_key_securitytrails=None, api_key_censys=None, api_key_shodan=None):
     config = load_config()
     api_key_securitytrails = api_key_securitytrails or config.get("SecurityTrails") or None
     api_key_censys = api_key_censys or config.get("Censys") or None
@@ -356,7 +405,7 @@ def check_for_updates():
         
         os.execv(sys.executable, ['python'] + sys.argv)
 
-
+domains = []
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Subdomain Enumeration Tool")
     parser.add_argument("-d","--domain", help="The domain to enumerate subdomains",default=None)
@@ -371,7 +420,9 @@ if __name__ == "__main__":
     if args.api == True and  args.api_key_securitytrails != None or args.api_key_censys != None or args.api_key_shodan != None:
         update_api(args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
     elif args.domain != None:
-        main(args.domain, args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
+        f = open("results.txt", "w")
+        f.close()
+        single(args.domain, args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
         write_to_file(f"results.txt", subs)
         print(f'{green}[*]{clr} Found {len(subs)} domains.')
         print(f'{green}[*]{clr} Results saved to results.txt.')
@@ -380,12 +431,24 @@ if __name__ == "__main__":
             f = open(args.list, 'r')
             Lines = f.readlines()
             for line in Lines:
-                main(line.strip(), args.api_key_securitytrails, args.api_key_censys, args.api_key_shodan)
-            write_to_file(f"results.txt", subs)
-            print(f'{green}[*]{clr} Found {len(subs)} domains.')
+                domains.append(line.strip())
+            f.close()
+            start = t.perf_counter()
+            lock = Lock()
+            now = Value('i',0)
+            processes = []
+            print(f"cpu count : {cpu_count()}")
+            for _ in range(cpu_count()):
+                try:
+                    p = Process(target=threader,args=(now,lock))
+                    processes.append(p)
+                    p.start()
+                except:
+                    print("Exception occurred.")
+            for p in processes:
+                p.join()
+            end = t.perf_counter()
+            print(f"\n{green}[*]{clr}Finshed in {round(end-start,2)}")
             print(f'{green}[*]{clr} Results saved to results.txt.')
     else:
         parser.print_help(sys.stderr)
-    
-
-
