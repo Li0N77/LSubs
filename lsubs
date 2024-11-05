@@ -33,7 +33,7 @@ FAIL = '\033[91m'
 subdomains = set()
 subs = set()
 
-current_version = "1.0.2"
+current_version = "1.0.3"
 pastebin_url = "https://pastebin.com/raw/kYkssEd8"
 tool_path = os.path.expanduser("~/.local/bin/lsubs")
 download_dir = os.path.expanduser("~/.local/bin")
