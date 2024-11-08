@@ -77,7 +77,6 @@ Command-Line Arguments
 
 ## Supported Platforms
   - Linux
-  - macOS
 
 ## Updates
 ### 1.0.0
@@ -86,6 +85,12 @@ Command-Line Arguments
 ### 1.0.1
   - adding subfinder
   - adding Auto-update feature
+
+### 1.0.2 
+  - bug fix
+
+### 1.0.3 
+  - add multi-threading for lists to be faster
 
 ## Reporting Issues
 
