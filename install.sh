@@ -1,5 +1,5 @@
 echo "setup configuration"
-echo "{\n    \"SecurityTrails\": \"\",\n    \"Censys\": \"\",\n    \"Shodan\": \"\"\n}" > ~/.local/bin/lsubs-config.json
+echo "{    \"SecurityTrails\": \"\",    \"Censys\": \"\",    \"Shodan\": \"\"}" > ~/.local/bin/lsubs-config.json
 
 mkdir -p ~/.local/bin
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
