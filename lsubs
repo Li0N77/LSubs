@@ -144,7 +144,7 @@ def subfinder_enumeration(domain):
     
     subdomains = []
     try:
-        output = subprocess.check_output(["subfinder", "-d", domain, "-o", "/dev/stdout"], stderr=subprocess.STDOUT).decode()
+        output = subprocess.check_output(["subfinder","-all","-silent", "-d", domain, "-o", "/dev/stdout"], stderr=subprocess.STDOUT).decode()
         subdomains = output.splitlines()
         return subdomains
     except Exception as e:
