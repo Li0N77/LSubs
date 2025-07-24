@@ -6,17 +6,6 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 echo "Installing command-line tools..."
-
-if ! command -v amass &> /dev/null
-then
-    echo "Amass not found, installing..."
-    wget https://github.com/OWASP/Amass/releases/download/v3.20.1/amass_3.20.1_linux_amd64.deb
-    dpkg -i amass_3.20.1_linux_amd64.deb
-    rm amass_3.20.1_linux_amd64.deb
-else
-    echo "Amass is already installed."
-fi
-
 if ! command -v sublist3r &> /dev/null
 then
     echo "Sublist3r not found, installing..."
