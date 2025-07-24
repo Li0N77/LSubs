@@ -50,7 +50,7 @@ def crtsh_enumeration(domain):
     
     try:
         url = apis["crt.sh"].format(domain=domain)
-        response = requests.get(url)
+        response = requests.get(url,timeout=50)
         if response.status_code == 200:
             data = response.json()
             subdomains = {entry['name_value'] for entry in data}
@@ -357,7 +357,7 @@ def starter():
 | (____/\/\____) || (___) || )___) )/\____) |
 (_______/\_______)(_______)|/ \___/ \_______)
 
-    Programmed by Li0N | github : @Li0N77
+    cOdEd by Li0N | github : @Li0N77
             Version : {current_version}
 """
     print(text)
