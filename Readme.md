@@ -19,9 +19,7 @@ Clone the Repository:
   Run the Installation Scripts :
     
     chmod +x install.sh
-    chmod +x install-tools.sh
     ./install.sh
-    sudo ./install-tools.sh
 
 This script will:
 
